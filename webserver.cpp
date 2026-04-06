@@ -111,10 +111,14 @@ void WebServer::thread_pool()
 void WebServer::eventListen()
 {
     //网络编程基础步骤
+    /*PF_INET 表示协议族（Protocol Family）是 IPv4 网络。也可以理解为使用 AF_INET，用于 TCP/IP IPv4。
+    SOCK_STREAM 表示这是一个流式 socket。也就是 TCP 类型的 socket，面向连接、可靠传输。
+    0 表示协议号由系统根据前两个参数自动选择。对于 PF_INET + SOCK_STREAM，通常会选择 IPPROTO_TCP。 */
     m_listenfd = socket(PF_INET, SOCK_STREAM, 0);
-    assert(m_listenfd >= 0);
+    assert(m_listenfd >= 0);//>=0代表成功创建
 
-    //优雅关闭连接
+    //根据m_OPT_LINGER决定关闭方式
+    //SO_LINGER是SOL_SOCKET的一个选项，可以通过传入linger{int,int}来控制，前者1代表开启，后者则为关闭时的等待时间，单位为秒
     if (0 == m_OPT_LINGER)
     {
         struct linger tmp = {0, 1};

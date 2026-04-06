@@ -49,31 +49,31 @@ public:
     char *m_root;//根目录
     int m_log_write;//日志写入方式
     int m_close_log;//关闭日志
-    int m_actormodel;//并发模型
+    int m_actormodel;//并发模型数量
 
     int m_pipefd[2];
     int m_epollfd;
     http_conn *users;
 
     //数据库相关
-    connection_pool *m_connPool;
+    connection_pool *m_connPool;//数据库连接池
     string m_user;         //登陆数据库用户名
     string m_passWord;     //登陆数据库密码
     string m_databaseName; //使用数据库名
     int m_sql_num;
 
     //线程池相关
-    threadpool<http_conn> *m_pool;
-    int m_thread_num;
+    threadpool<http_conn> *m_pool;//线程池
+    int m_thread_num;//线程池线程数
 
     //epoll_event相关
     epoll_event events[MAX_EVENT_NUMBER];
 
-    int m_listenfd;
-    int m_OPT_LINGER;
-    int m_TRIGMode;
-    int m_LISTENTrigmode;
-    int m_CONNTrigmode;
+    int m_listenfd;        // 监听 socket 文件描述符
+    int m_OPT_LINGER;      // 是否启用优雅关闭（SO_LINGER 选项）
+    int m_TRIGMode;        // 整体触发模式，监听和连接的默认触发方式
+    int m_LISTENTrigmode;  // 监听 socket 的触发模式（LT/ET）
+    int m_CONNTrigmode;    // 已连接 socket 的触发模式（LT/ET）
 
     //定时器相关
     client_data *users_timer;

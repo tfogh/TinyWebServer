@@ -26,6 +26,7 @@ void http_conn::initmysql_result(connection_pool *connPool)
     //在user表中检索username，passwd数据，浏览器端输入
     if (mysql_query(mysql, "SELECT username,passwd FROM user"))
     {
+        //如果检索失败，记录日志
         LOG_ERROR("SELECT error:%s\n", mysql_error(mysql));
     }
 
