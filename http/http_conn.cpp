@@ -57,6 +57,10 @@ int setnonblocking(int fd)
 }
 
 //将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
+/// @param epollfd 内核事件表描述符
+/// @param fd 文件描述符
+/// @param one_shot 是否开启EPOLLONESHOT
+/// @param TRIGMode 触发模式，1=ET模式，0=LT模式
 void addfd(int epollfd, int fd, bool one_shot, int TRIGMode)
 {
     epoll_event event;

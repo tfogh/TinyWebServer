@@ -46,7 +46,7 @@ void connection_pool::init(string url, string User, string PassWord, string DBNa
 
 		if (con == NULL)
 		{
-			LOG_ERROR("MySQL Error");
+			LOG_ERROR("MySQL Connection Error");
 			exit(1);
 		}
 		connList.push_back(con);
@@ -68,7 +68,6 @@ MYSQL *connection_pool::GetConnection()
 		return NULL;
 
 	reserve.wait();
-	
 	lock.lock();
 
 	con = connList.front();

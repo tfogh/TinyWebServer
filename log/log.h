@@ -24,8 +24,15 @@ public:
     {
         Log::get_instance()->async_write_log();
     }
+
     //可选择的参数有日志文件、日志缓冲区大小、最大行数以及最长日志条队列
-    bool init(const char *file_name, int close_log, int log_buf_size = 8192, int split_lines = 5000000, int max_queue_size = 0);
+    /// @param file_name 日志文件名
+    /// @param close_log 日志状态，非0=关闭日志
+    /// @param log_buf_size 日志缓冲区大小
+    /// @param split_lines 日志文件最大行数
+    /// @param max_queue_size 异步日志队列长度
+    bool init(const char *file_name, int close_log, int log_buf_size = 8192,
+            int split_lines = 5000000, int max_queue_size = 0);
 
     void write_log(int level, const char *format, ...);
 
@@ -55,6 +62,7 @@ private:
     int m_today;        //因为按天分类,记录当前时间是那一天
     FILE *m_fp;         //打开log的文件指针
     char *m_buf;
+
     block_queue<string> *m_log_queue; //阻塞队列
     bool m_is_async;                  //是否同步标志位
     locker m_mutex;

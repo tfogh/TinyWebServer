@@ -31,17 +31,17 @@ WebServer::~WebServer()
 void WebServer::init(int port, string user, string passWord, string databaseName, int log_write, 
                      int opt_linger, int trigmode, int sql_num, int thread_num, int close_log, int actor_model)
 {
-    m_port = port;
-    m_user = user;
-    m_passWord = passWord;
-    m_databaseName = databaseName;
-    m_sql_num = sql_num;
-    m_thread_num = thread_num;
-    m_log_write = log_write;
-    m_OPT_LINGER = opt_linger;
-    m_TRIGMode = trigmode;
-    m_close_log = close_log;
-    m_actormodel = actor_model;
+    m_port = port;                   // 服务器监听端口
+    m_user = user;                   // MySQL 用户名
+    m_passWord = passWord;           // MySQL 密码
+    m_databaseName = databaseName;   // MySQL 数据库名
+    m_sql_num = sql_num;             // 数据库连接池大小
+    m_thread_num = thread_num;       // 线程池线程数
+    m_log_write = log_write;         // 日志写入方式：0 同步，1 异步
+    m_OPT_LINGER = opt_linger;       // 优雅关闭连接选项
+    m_TRIGMode = trigmode;           // epoll 触发模式选择
+    m_close_log = close_log;         // 是否关闭日志
+    m_actormodel = actor_model;      // 并发模型：0 Proactor，1 Reactor
 }
 
 void WebServer::trig_mode()
@@ -76,11 +76,19 @@ void WebServer::log_write()
 {
     if (0 == m_close_log)
     {
+        bool ok;
         //初始化日志
         if (1 == m_log_write)
-            Log::get_instance()->init("./ServerLog", m_close_log, 2000, 800000, 800);
+            ok = Log::get_instance()->init("./ServerLog", m_close_log, 2000, 800000, 800);
         else
-            Log::get_instance()->init("./ServerLog", m_close_log, 2000, 800000, 0);
+            ok = Log::get_instance()->init("./ServerLog", m_close_log, 2000, 800000, 0);
+
+        if (!ok)
+        {
+            // 如果日志初始化失败，关闭日志功能，避免后续写日志时使用空文件指针
+            fprintf(stderr, "Warning: failed to initialize log file '%s'. Logging disabled.\n", "./ServerLog");
+            m_close_log = 1;
+        }
     }
 }
 

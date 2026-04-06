@@ -29,9 +29,9 @@ public:
               int log_write , int opt_linger, int trigmode, int sql_num,
               int thread_num, int close_log, int actor_model);
 
-    void thread_pool();
-    void sql_pool();
-    void log_write();
+    void thread_pool();//线程池
+    void sql_pool();//数据库从接连接池
+    void log_write();//日志系统
     void trig_mode();
     void eventListen();
     void eventLoop();
@@ -45,11 +45,11 @@ public:
 
 public:
     //基础
-    int m_port;
-    char *m_root;
-    int m_log_write;
-    int m_close_log;
-    int m_actormodel;
+    int m_port;//端口号
+    char *m_root;//根目录
+    int m_log_write;//日志写入方式
+    int m_close_log;//关闭日志
+    int m_actormodel;//并发模型
 
     int m_pipefd[2];
     int m_epollfd;

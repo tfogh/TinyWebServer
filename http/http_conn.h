@@ -29,9 +29,9 @@
 class http_conn
 {
 public:
-    static const int FILENAME_LEN = 200;
-    static const int READ_BUFFER_SIZE = 2048;
-    static const int WRITE_BUFFER_SIZE = 1024;
+    static const int FILENAME_LEN = 200;//文件名最大长度
+    static const int READ_BUFFER_SIZE = 2048;//读取缓冲区长度
+    static const int WRITE_BUFFER_SIZE = 1024;//写入缓冲区长度
     enum METHOD
     {
         GET = 0,
@@ -73,7 +73,7 @@ public:
     ~http_conn() {}
 
 public:
-    void init(int sockfd, const sockaddr_in &addr, char *, int, int, string user, string passwd, string sqlname);
+    void init(int sockfd, const sockaddr_in &addr, char *, int, int, string user, string passwd, string sqlname);//初始化连接,外部调用初始化套接字地址
     void close_conn(bool real_close = true);
     void process();
     bool read_once();

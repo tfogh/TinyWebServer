@@ -54,7 +54,7 @@ public:
     }
     bool lock()
     {
-        return pthread_mutex_lock(&m_mutex) == 0;
+        return pthread_mutex_lock(&m_mutex) == 0;   
     }
     bool unlock()
     {
@@ -93,6 +93,7 @@ public:
     }
     bool timewait(pthread_mutex_t *m_mutex, struct timespec t)
     {
+        
         int ret = 0;
         //pthread_mutex_lock(&m_mutex);
         ret = pthread_cond_timedwait(&m_cond, m_mutex, &t);
