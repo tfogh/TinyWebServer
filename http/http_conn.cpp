@@ -16,6 +16,8 @@ const char *error_500_form = "There was an unusual problem serving the request f
 
 locker m_lock;
 map<string, string> users;
+int http_conn::m_user_count = 0;
+int http_conn::m_epollfd = -1;
 
 void http_conn::initmysql_result(connection_pool *connPool)
 {
@@ -99,8 +101,7 @@ void modfd(int epollfd, int fd, int ev, int TRIGMode)
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
 }
 
-int http_conn::m_user_count = 0;
-int http_conn::m_epollfd = -1;
+
 
 //关闭连接，关闭一个连接，客户总量减一
 void http_conn::close_conn(bool real_close)
