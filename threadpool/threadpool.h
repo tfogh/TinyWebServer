@@ -33,6 +33,8 @@ private:
     connection_pool *m_connPool;  //数据库连接池
     int m_actor_model;          //模型切换
 };
+
+//线程池的构造函数
 template <typename T>
 threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int thread_number, int max_requests) 
         : m_actor_model(actor_model),m_thread_number(thread_number), 

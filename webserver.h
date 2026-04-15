@@ -49,7 +49,7 @@ public:
     char *m_root;//根目录
     int m_log_write;//日志写入方式
     int m_close_log;//关闭日志
-    int m_actormodel;//并发模型数量
+    int m_actormodel;// 并发模型：0 Proactor，1 Reactor
 
     int m_pipefd[2];
     int m_epollfd;

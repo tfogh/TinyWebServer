@@ -84,7 +84,7 @@ public:
     }
     void initmysql_result(connection_pool *connPool);//从数据库获取用户信息
     int timer_flag;
-    int improv;
+    int improv;//标记任务是否完成
 
 
 private:

@@ -37,6 +37,8 @@ void sort_timer_lst::add_timer(util_timer *timer)
     }
     add_timer(timer, head);
 }
+
+//增加时间后判断是否要调整链表顺序
 void sort_timer_lst::adjust_timer(util_timer *timer)
 {
     if (!timer)
@@ -62,6 +64,8 @@ void sort_timer_lst::adjust_timer(util_timer *timer)
         add_timer(timer, timer->next);
     }
 }
+
+//从链表移除某一timer
 void sort_timer_lst::del_timer(util_timer *timer)
 {
     if (!timer)
@@ -215,10 +219,13 @@ int *Utils::u_pipefd = 0;
 int Utils::u_epollfd = 0;
 
 class Utils;
+//超时函数 移除socket然后关闭
 void cb_func(client_data *user_data)
 {
+    //将socket从epllo中移除
     epoll_ctl(Utils::u_epollfd, EPOLL_CTL_DEL, user_data->sockfd, 0);
     assert(user_data);
+    //关闭socket
     close(user_data->sockfd);
     http_conn::m_user_count--;
 }

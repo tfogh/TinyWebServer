@@ -123,7 +123,7 @@ void http_conn::init(int sockfd, const sockaddr_in &addr, char *root, int TRIGMo
     m_address = addr;
 
     addfd(m_epollfd, sockfd, true, m_TRIGMode);
-    m_user_count++;
+    m_user_count++;//静态成员变量:连接数增加
 
     //当浏览器出现连接重置时，可能是网站根目录出错或http响应格式出错或者访问的文件中内容完全为空
     doc_root = root;
@@ -203,26 +203,27 @@ http_conn::LINE_STATUS http_conn::parse_line()
 //非阻塞ET工作模式下，需要一次性将数据读完
 bool http_conn::read_once()
 {
-    if (m_read_idx >= READ_BUFFER_SIZE)
+    //将数据从socket读入buf中，从m_read_idx处开始储存
+    if (m_read_idx >= READ_BUFFER_SIZE)//buf已满
     {
         return false;
     }
-    int bytes_read = 0;
+    ssize_t bytes_read = 0;//记录读取字节数
 
-    //LT读取数据
+    //LT读取数据 只读取一次，下次还会报告
     if (0 == m_TRIGMode)
     {
-        bytes_read = recv(m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);
-        m_read_idx += bytes_read;
+        bytes_read = recv(m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);//从套接字读取数据
+        
 
         if (bytes_read <= 0)
         {
             return false;
         }
-
+        m_read_idx += bytes_read;//移动索引位置
         return true;
     }
-    //ET读数据
+    //ET读数据 持续读取数据至读取完毕
     else
     {
         while (true)
@@ -230,6 +231,8 @@ bool http_conn::read_once()
             bytes_read = recv(m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);
             if (bytes_read == -1)
             {
+                if (errno == EINTR)
+                    continue; // 被信号打断，重试 
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
                     break;
                 return false;

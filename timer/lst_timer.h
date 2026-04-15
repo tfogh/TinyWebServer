@@ -39,10 +39,10 @@ public:
     util_timer() : prev(NULL), next(NULL) {}
 
 public:
-    time_t expire;
+    time_t expire;//倒计时时长
     
     void (* cb_func)(client_data *);
-    client_data *user_data;
+    client_data *user_data;//用户信息
     util_timer *prev;
     util_timer *next;
 };
