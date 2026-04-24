@@ -46,8 +46,11 @@ public:
     };
     enum CHECK_STATE
     {
+        // 解析请求行：方法、URL、HTTP 版本。由 parse_request_line() 处理，成功后切换到 HEADER。
         CHECK_STATE_REQUESTLINE = 0,
+        // 解析请求头：逐行解析 Connection、Content-Length、Host 等；遇空行视为头部结束。
         CHECK_STATE_HEADER,
+        // 解析请求体：读取 body（例如 POST 的 body），由 parse_content() 判断是否读取完成。
         CHECK_STATE_CONTENT
     };
     enum HTTP_CODE
@@ -63,9 +66,9 @@ public:
     };
     enum LINE_STATUS
     {
-        LINE_OK = 0,
-        LINE_BAD,
-        LINE_OPEN
+        LINE_OK = 0,//成功读取结束
+        LINE_BAD,//读取失败
+        LINE_OPEN//读取未结束还需要继续
     };
 
 public:
@@ -83,7 +86,7 @@ public:
         return &m_address;
     }
     void initmysql_result(connection_pool *connPool);//从数据库获取用户信息
-    int timer_flag;
+    int timer_flag;//标记需要对timer进行处理
     int improv;//标记任务是否完成
 
 
@@ -119,7 +122,7 @@ private:
     char m_read_buf[READ_BUFFER_SIZE];
     long m_read_idx;
     long m_checked_idx;
-    int m_start_line;
+    int m_start_line;//本次解析的起始索引值
     char m_write_buf[WRITE_BUFFER_SIZE];
     int m_write_idx;
     CHECK_STATE m_check_state;
@@ -127,16 +130,16 @@ private:
     char m_real_file[FILENAME_LEN];
     char *m_url;
     char *m_version;
-    char *m_host;
-    long m_content_length;
-    bool m_linger;
+    char *m_host;//主机地址
+    long m_content_length;//请求体内容长度
+    bool m_linger;//是否保持持续连接
     char *m_file_address;
     struct stat m_file_stat;
     struct iovec m_iv[2];
     int m_iv_count;
-    int cgi;        //是否启用的POST
+    int cgi;        //当前请求是否为post
     char *m_string; //存储请求头数据
-    int bytes_to_send;
+    int bytes_to_send;//要发送的字节数
     int bytes_have_send;
     char *doc_root;
 
@@ -147,6 +150,8 @@ private:
     char sql_user[100];
     char sql_passwd[100];
     char sql_name[100];
+
+    bool logged_in;//用户是否已登录
 };
 
 #endif

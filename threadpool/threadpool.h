@@ -8,6 +8,9 @@
 #include "../lock/locker.h"
 #include "../CGImysql/sql_connection_pool.h"
 
+#define read_state 0
+#define write_state 1
+
 template <typename T>
 class threadpool
 {
@@ -72,7 +75,7 @@ threadpool<T>::~threadpool()
     delete[] m_threads;
 }
 template <typename T>
-bool threadpool<T>::append(T *request, int state)//
+bool threadpool<T>::append(T *request, int state)//state1代表写，0代表读
 {
     m_queuelocker.lock();
     if (m_workqueue.size() >= m_max_requests)
@@ -80,7 +83,7 @@ bool threadpool<T>::append(T *request, int state)//
         m_queuelocker.unlock();
         return false;
     }
-    request->m_state = state;
+    request->m_state = state;//设定需求的类型
     m_workqueue.push_back(request);
     m_queuelocker.unlock();
     m_queuestat.post();
@@ -107,6 +110,7 @@ void *threadpool<T>::worker(void *arg)//线程的入口函数，参数为线程�
     pool->run();//调用线程的运行函数
     return pool;//返回线程对象指针
 }
+//线程运行的函数
 template <typename T>
 void threadpool<T>::run()
 {
@@ -122,16 +126,19 @@ void threadpool<T>::run()
         T *request = m_workqueue.front();
         m_workqueue.pop_front();
         m_queuelocker.unlock();
-        if (!request)
-            continue;
+
+        if (!request)continue;
+
         if (1 == m_actor_model)
         {
-            if (0 == request->m_state)
+            //写事件
+            if (write_state == request->m_state)
             {
                 if (request->read_once())
                 {
                     request->improv = 1;
                     connectionRAII mysqlcon(&request->mysql, m_connPool);
+                    //解析http请求
                     request->process();
                 }
                 else
@@ -140,6 +147,7 @@ void threadpool<T>::run()
                     request->timer_flag = 1;
                 }
             }
+            //读事件
             else
             {
                 if (request->write())

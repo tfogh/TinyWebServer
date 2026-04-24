@@ -41,7 +41,7 @@ void http_conn::initmysql_result(connection_pool *connPool)
     //返回所有字段结构的数组
     MYSQL_FIELD *fields = mysql_fetch_fields(result);
 
-    //从结果集中获取下一行，将对应的用户名和密码，存入map中
+    //从结果集中获取下一行，将对应的用户名和密码，存入usermap中
     while (MYSQL_ROW row = mysql_fetch_row(result))
     {
         string temp1(row[0]);
@@ -159,6 +159,7 @@ void http_conn::init()
     m_state = 0;
     timer_flag = 0;
     improv = 0;
+    logged_in = 0;
 
     memset(m_read_buf, '\0', READ_BUFFER_SIZE);
     memset(m_write_buf, '\0', WRITE_BUFFER_SIZE);
@@ -213,7 +214,7 @@ bool http_conn::read_once()
     //LT读取数据 只读取一次，下次还会报告
     if (0 == m_TRIGMode)
     {
-        bytes_read = recv(m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);//从套接字读取数据
+        bytes_read = recv(m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);//从套接字读取数据，一次最多读取READ_BUFFER_SIZE - m_read_idx长度
         
 
         if (bytes_read <= 0)
@@ -256,6 +257,7 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char *text)
         return BAD_REQUEST;
     }
     *m_url++ = '\0';
+
     char *method = text;
     if (strcasecmp(method, "GET") == 0)
         m_method = GET;
@@ -266,7 +268,9 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char *text)
     }
     else
         return BAD_REQUEST;
+    
     m_url += strspn(m_url, " \t");
+
     m_version = strpbrk(m_url, " \t");
     if (!m_version)
         return BAD_REQUEST;
@@ -274,13 +278,13 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char *text)
     m_version += strspn(m_version, " \t");
     if (strcasecmp(m_version, "HTTP/1.1") != 0)
         return BAD_REQUEST;
+
     if (strncasecmp(m_url, "http://", 7) == 0)
     {
         m_url += 7;
         m_url = strchr(m_url, '/');
     }
-
-    if (strncasecmp(m_url, "https://", 8) == 0)
+    else if (strncasecmp(m_url, "https://", 8) == 0)
     {
         m_url += 8;
         m_url = strchr(m_url, '/');
@@ -288,6 +292,7 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char *text)
 
     if (!m_url || m_url[0] != '/')
         return BAD_REQUEST;
+        
     //当url为/时，显示判断界面
     if (strlen(m_url) == 1)
         strcat(m_url, "judge.html");
@@ -347,7 +352,7 @@ http_conn::HTTP_CODE http_conn::parse_content(char *text)
     }
     return NO_REQUEST;
 }
-
+//解析请求数据
 http_conn::HTTP_CODE http_conn::process_read()
 {
     LINE_STATUS line_status = LINE_OK;
@@ -361,34 +366,34 @@ http_conn::HTTP_CODE http_conn::process_read()
         LOG_INFO("%s", text);
         switch (m_check_state)
         {
-        case CHECK_STATE_REQUESTLINE:
-        {
-            ret = parse_request_line(text);
-            if (ret == BAD_REQUEST)
-                return BAD_REQUEST;
-            break;
-        }
-        case CHECK_STATE_HEADER:
-        {
-            ret = parse_headers(text);
-            if (ret == BAD_REQUEST)
-                return BAD_REQUEST;
-            else if (ret == GET_REQUEST)
+            case CHECK_STATE_REQUESTLINE:
             {
-                return do_request();
+                ret = parse_request_line(text);
+                if (ret == BAD_REQUEST)
+                    return BAD_REQUEST;
+                break;
             }
-            break;
-        }
-        case CHECK_STATE_CONTENT:
-        {
-            ret = parse_content(text);
-            if (ret == GET_REQUEST)
-                return do_request();
-            line_status = LINE_OPEN;
-            break;
-        }
-        default:
-            return INTERNAL_ERROR;
+            case CHECK_STATE_HEADER:
+            {
+                ret = parse_headers(text);
+                if (ret == BAD_REQUEST)
+                    return BAD_REQUEST;
+                else if (ret == GET_REQUEST)
+                {
+                    return do_request();
+                }
+                break;
+            }
+            case CHECK_STATE_CONTENT:
+            {
+                ret = parse_content(text);
+                if (ret == GET_REQUEST)
+                    return do_request();
+                line_status = LINE_OPEN;
+                break;
+            }
+            default:
+                return INTERNAL_ERROR;
         }
     }
     return NO_REQUEST;
@@ -404,7 +409,6 @@ http_conn::HTTP_CODE http_conn::do_request()
     //处理cgi
     if (cgi == 1 && (*(p + 1) == '2' || *(p + 1) == '3'))
     {
-
         //根据标志判断是登录检测还是注册检测
         char flag = m_url[1];
 
@@ -427,6 +431,8 @@ http_conn::HTTP_CODE http_conn::do_request()
             password[j] = m_string[i];
         password[j] = '\0';
 
+
+        //注册逻辑
         if (*(p + 1) == '3')
         {
             //如果是注册，先检测数据库中是否有重名的
@@ -439,6 +445,7 @@ http_conn::HTTP_CODE http_conn::do_request()
             strcat(sql_insert, password);
             strcat(sql_insert, "')");
 
+            //用户不存在 进行注册
             if (users.find(name) == users.end())
             {
                 m_lock.lock();
@@ -459,58 +466,50 @@ http_conn::HTTP_CODE http_conn::do_request()
         else if (*(p + 1) == '2')
         {
             if (users.find(name) != users.end() && users[name] == password)
+            {
+                logged_in = true;
                 strcpy(m_url, "/welcome.html");
+                
+            }
             else
                 strcpy(m_url, "/logError.html");
         }
     }
 
-    if (*(p + 1) == '0')
+    if (*(p + 1) == '0')//注册页面
     {
-        char *m_url_real = (char *)malloc(sizeof(char) * 200);
-        strcpy(m_url_real, "/register.html");
-        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
-
-        free(m_url_real);
+        strcpy(m_real_file + len, "/register.html");
     }
-    else if (*(p + 1) == '1')
+    else if (*(p + 1) == '1')//登录页面
     {
-        char *m_url_real = (char *)malloc(sizeof(char) * 200);
-        strcpy(m_url_real, "/log.html");
-        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
-
-        free(m_url_real);
+        strcpy(m_real_file + len, "/log.html");
     }
     else if (*(p + 1) == '5')
     {
-        char *m_url_real = (char *)malloc(sizeof(char) * 200);
-        strcpy(m_url_real, "/picture.html");
-        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
-
-        free(m_url_real);
+        // const char* path = logged_in ? "/picture.html" : "/log.html";
+        const char* path ="/picture.html";
+        strcpy(m_real_file + len, path);
     }
     else if (*(p + 1) == '6')
     {
-        char *m_url_real = (char *)malloc(sizeof(char) * 200);
-        strcpy(m_url_real, "/video.html");
-        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
-
-        free(m_url_real);
+        // const char* path = logged_in ? "/video.html" : "/log.html";
+        const char* path ="/video.html";
+        strcpy(m_real_file + len, path);
     }
     else if (*(p + 1) == '7')
     {
-        char *m_url_real = (char *)malloc(sizeof(char) * 200);
-        strcpy(m_url_real, "/fans.html");
-        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
-
-        free(m_url_real);
+        // const char* path = logged_in ? "/fans.html" : "/log.html";
+        const char* path ="/fans.html";
+        strcpy(m_real_file + len, path);
     }
     else
         strncpy(m_real_file + len, m_url, FILENAME_LEN - len - 1);
 
+    //获取文件信息
     if (stat(m_real_file, &m_file_stat) < 0)
         return NO_RESOURCE;
 
+    //检测文件是否可读取
     if (!(m_file_stat.st_mode & S_IROTH))
         return FORBIDDEN_REQUEST;
 
@@ -518,6 +517,7 @@ http_conn::HTTP_CODE http_conn::do_request()
         return BAD_REQUEST;
 
     int fd = open(m_real_file, O_RDONLY);
+    if(fd<=0)return BAD_REQUEST;
     m_file_address = (char *)mmap(0, m_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     close(fd);
     return FILE_REQUEST;
@@ -558,18 +558,22 @@ bool http_conn::write()
 
         bytes_have_send += temp;
         bytes_to_send -= temp;
+        //头部已发送完
         if (bytes_have_send >= m_iv[0].iov_len)
         {
             m_iv[0].iov_len = 0;
+            //更新起始地址
             m_iv[1].iov_base = m_file_address + (bytes_have_send - m_write_idx);
+            //更新剩余长度
             m_iv[1].iov_len = bytes_to_send;
         }
+        //响应头未发送完毕需要继续发送
         else
         {
             m_iv[0].iov_base = m_write_buf + bytes_have_send;
             m_iv[0].iov_len = m_iv[0].iov_len - bytes_have_send;
         }
-
+        //全部发送完毕
         if (bytes_to_send <= 0)
         {
             unmap();
@@ -694,6 +698,7 @@ bool http_conn::process_write(HTTP_CODE ret)
     bytes_to_send = m_write_idx;
     return true;
 }
+//连接处理的主入口，调度读请求与写响应
 void http_conn::process()
 {
     HTTP_CODE read_ret = process_read();

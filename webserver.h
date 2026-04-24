@@ -69,7 +69,7 @@ public:
     //epoll_event相关
     epoll_event events[MAX_EVENT_NUMBER];
 
-    int m_listenfd;        // 监听 socket 文件描述符
+    int m_listenfd;        // 用于监听的socket 文件描述符
     int m_OPT_LINGER;      // 是否启用优雅关闭（SO_LINGER 选项）
     int m_TRIGMode;        // 整体触发模式，监听和连接的默认触发方式
     int m_LISTENTrigmode;  // 监听 socket 的触发模式（LT/ET）
